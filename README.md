@@ -5,17 +5,18 @@ This guide provides an overview of setting up and using an educational Homelab w
 
 ## Index
 1. [Creating Azure Account](https://github.com/IsmailEdris/Azur_SIEM/blob/main/README.md#step-1-create-a-microsoft-azure-account)
-2. [Creating and Setting up the Honey Pot](LINK)
-3. [Connecting Log analytics to the VM](LINK)
-4. [Setting up Microsoft Sentinel](LINK)
-5. [Logging in to the VM](LINK)
-6. [Event Viewer](LINK)
-7. [Firewall Configurations](LINK)
-8. [Powershell Script and API Key](LINK)
-9. [Creating Custom Logs](LINK)
-10. [Creating Custom Fields and Extracting Raw Log Data](Link)
-11. [Setting up Sentinel Map](LINK)
-12. [Creating SIEM Alerts](LINK)
+2. [Creating and Setting up the Honey Pot](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-2-create-and-set-up-a-honeypot)
+3. [Creating a Log Analytices Workspace](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-3-creat-a-log-analytics-workspace-law)
+4. [Setting up Microsoft Defender for Cloud](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-4-set-up-microsoft-defender-for-cloud)
+5. [Linking the VM to Log Analytic Workspace](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-5-linking-the-vm-to-law)
+6. [Setting up Microsoft Sentinel](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-6-setup-microsoft-sentinel)
+7. [Firewall Configurations](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-6-setup-microsoft-sentinel)
+8. [Powershell Script and API Key](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-6-setup-microsoft-sentinel)
+9. [Creating Custom Logs](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-9-make-a-custom-log)
+10. [Creating Custom Fields and Extracting Raw Log Data](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-10--query--extract-fields-from-custom-log)
+11. [Setting up Sentinel Map](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-11-create-world-attack-map-in-microsoft-sentinel)
+12. [Creating SIEM Alerts](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-12-creating-siem-alerts)
+13. [Deleting Everything (IMPORTANT)](https://github.com/IsmailEdris/Azur_SIEM/tree/main?tab=readme-ov-file#step-13--shut-down-resources)
 
 ## How does the project work?
 1.	We are going to build a **Vulnerable VM** in Azure.
@@ -94,7 +95,7 @@ This guide provides an overview of setting up and using an educational Homelab w
 
 ![nic](https://camo.githubusercontent.com/de615c6f72bf73666048bd38ffdc73b668f23e8f3891f7c4d0cbab8df4064ee7/68747470733a2f2f692e696d6775722e636f6d2f6a4d6c723455452e706e67)
 
-## Step 3: Creat a Log Analytics Workspace (LAW)
+## Step 3: Create a Log Analytics Workspace (LAW)
 
 1. Search for "Log analytics workspaces"
 2. Select Create Log Analytics workspace
