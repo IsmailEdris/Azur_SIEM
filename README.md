@@ -167,8 +167,161 @@ This guide provides an overview of setting up and using an educational Homelab w
 
 1. In your VM launch Powershell ISE
 2. Configure Edge browser without logging in
-3. Copy Powershell Script and insert into Virtual Machine's Powershell (authored by Josh Madakor)
+3. Copy [PowerShell Script](https://github.com/IsmailEdris/Azur_SIEM/blob/9afee62ba18f4adfa56b5ea84e6773b577c14b91/powershell%20_script.ps1) (authored by Josh Makador) and paste it into the VM's Powershell 
 4. Choose New Script in Powershell ISE and paste script
 5. Give it a name and save it to the desktop (log_exporter)
+
+> PowerShell Scirpt
+
+![script](https://camo.githubusercontent.com/1b1cd6cfaa0b93662bdad02cd069887dc686d37fe3f95c37840694b96f19c803/68747470733a2f2f692e696d6775722e636f6d2f4f437a624e41732e706e67)
+
+6. Create an acount with [ipgeolocation.io](ipgeolocation.io)
+> ipgeolocation allows you to track 1,000 API calls per day for free, however, you can upgrade to 150,000 API calls for $15/month. For this tutorial we will be using the free 1,000 API calls.
+
+7. Once logged in, copy the API key and paste it into line 2 of the script.  ```$API_KEY = "<API key>"```
+8. Click Save
+9. To generate log data continually, run the PowerShell ISE script (green play button) in the virtual machine
+
+>ipgeolocation Interface
+
+![inter](https://camo.githubusercontent.com/11e3d26dc010ceaacf81df0f031993321155c5821a03ceefa2f7cbc250e7461c/68747470733a2f2f692e696d6775722e636f6d2f3765676f4869312e706e67)
+> Data will be exported from Windows Event Viewer and imported into the IP Geolocation service by the script. The latitude and longitude will then be extracted, and a new log file called failed_rdp.log will be created in the location specified below: C:\ProgramData\failed_rdp.log
+
+## Step 9: Make a custom Log
+- To add the extra information from the IP Geolocation service to Azure Sentinel, create a custom log
+1. Search "Run" in VM and type "C:\ProgramData"
+2. Open file named "failed_rdp" hit **CTRL + A** to select all and **CTRL + C** to copy selection
+3. On the host PC, open notepad and paste the information
+4. Save to desktop as "failed_rdp.log" Note: make sure it's saved as a (.txt) text file. I had issues with formatting when saving in (.rtf) rich text format.
+5. In Azure go to Log Analytics Workspaces -> Log Analytics workspace name (honeypot-law) -> Custom logs -> Add **custom log**
+
+### Sample
+- Select Sample log saved to Desktop (failed_rdp.log) and click Next
+### Record delimiter
+- Look over sample logs -> Click Next
+## Collection paths
+- Type: Windows
+- Path: "C:\ProgramData\failed_rdp.log
+## Details
+- Name and describe the custom log (FAILED_RDP_WITH_GEO) before pressing the Next button
+- Click Create
+
+> Custom Log Interface
+
+![custom](https://camo.githubusercontent.com/9747f35f18f1ebc2d125f9f26b66d6bd047b5a3526e754f70d432c8da00164fd/68747470733a2f2f692e696d6775722e636f6d2f344c53717268492e706e67)
+
+## Step 10 : Query + Extract Fields from Custom Log
+- Navigate to the newly established workspace (honeypot-law) in Log Analytics Workspaces -> Logs
+- We then can run a query and extract the different data filtering by different fields such as latitude, longitude, destinationhost, etc.
+- As of March 31st, 2023, Microsoft has disabled the creation of new custom fields and has migrated to KQL. You can learn more about it here
+- Copy/Paste the following query into the query window and Run Query
+
+```KQL
+FAILED_RDP_WITH_GEO_CL 
+| extend username = extract(@"username:([^,]+)", 1, RawData),
+         timestamp = extract(@"timestamp:([^,]+)", 1, RawData),
+         latitude = extract(@"latitude:([^,]+)", 1, RawData),
+         longitude = extract(@"longitude:([^,]+)", 1, RawData),
+         sourcehost = extract(@"sourcehost:([^,]+)", 1, RawData),
+         state = extract(@"state:([^,]+)", 1, RawData),
+         label = extract(@"label:([^,]+)", 1, RawData),
+         destination = extract(@"destinationhost:([^,]+)", 1, RawData),
+         country = extract(@"country:([^,]+)", 1, RawData)
+| where destination != "samplehost"
+| where sourcehost != ""
+| summarize event_count=count() by timestamp, label, country, state, sourcehost, username, destination, longitude, latitude
+```
+> KQL Query
+
+![kql](https://camo.githubusercontent.com/fa8d218fd1c75db92c5735f377043103b63819302fb9958c7ddc4cb591e12fb8/68747470733a2f2f692e696d6775722e636f6d2f514a6c41494e392e706e67)
+
+
+## Step 11: Create World Attack Map in Microsoft Sentinel
+- Access Microsoft Sentinel to view the Overview page and available events
+- Click on Workbooks and Add workbook then click Edit
+- Delete default widgets (three dots -> remove)
+- Click Add->Add query
+- You can Copy/Paste the previous query or this one into the query window and Run Query
+
+```kql
+Failed_RDP_Geolocation_CL
+| parse RawData with * "latitude:" Latitude ",longitude:" Longitude ",destinationhost:" DestinationHost ",username:" Username ",sourcehost:" Sourcehost ",state:" State ", country:" Country ",label:" Label ",timestamp:" Timestamp
+| where DestinationHost != "samplehost"
+| where Sourcehost != ""
+| summarize event_count=count() by Sourcehost, Latitude, Longitude, Country, Label, DestinationHost
+
+```
+- When results appear, select Map from the Visualization drop-down box.
+- Choose Map Settings to make additional adjustments
+
+### Layout Settings
+- Location info using: Latitude/Longitude
+- Latitude: latitude
+- Longitude: longitude
+- Size by: event_count
+
+### Color Settings
+- Coloring Type: Heatmap
+- Color by: event_count
+- Aggregation for color: Sum of Values
+- Color palette: Green to Red
+
+### Metric Settings
+- Metric Label: label
+- Metric Value: event_count
+- Click Apply button and Save and Close
+- Save as "Failed RDP International Map" in the same region and under the resource group (honeypot-lab)
+- Keep refreshing the map to show more inbound failed RDP attacks
+
+> Only failed login attempts will be shown on the map, not any additional attacks the VM might be facing.
+
+![internationa](https://camo.githubusercontent.com/30ff0df166aa43d4d83b8c251c8c24a6c2e4addd4b4dcee0ffece87305940646/68747470733a2f2f692e696d6775722e636f6d2f734251506a56792e706e67)
+
+> Event Viewer demonstrating failed RDP login attempts. EVENT ID: 4625
+
+![failed](https://camo.githubusercontent.com/335503d5dbee224e58719dbd95dec9ac678342b0aad132fd5e4e71f6b2669c4e/68747470733a2f2f692e696d6775722e636f6d2f536c436c7979492e706e67)
+
+> Data is also presented in the PowerShell script using ipgeolocation.io (third pary API)
+
+![third](https://camo.githubusercontent.com/caf562ed9a65fbb9c65a674d2ac8fa7c639870a019f5561f7db41edb8ec6cac2/68747470733a2f2f692e696d6775722e636f6d2f35513038666a4c2e706e67)
+
+### Step 12: Creating SIEM Alerts
+
+In this step we are going to create SIEM alerts that will notify us every time a failed login attempt occurs. We are going to see these alerts through our phone. So we will get a push notification from the Azure App every time someone tries to login. For this step you will need the Azure App downloaded on your phone. Make sure to login to the same Azure account on your phone and your PC so you can get the notifications. 
+
+1.	Search up “Log Analytics Workspace” in the search bar.
+2.	Click on the workspace that you made for this project. In this case “law-honeypot”
+3.	On the left hand side look for “Alerts” and click on it. 
+4.	Once you are on the Alerts page, at the top click “Create” and then “Alert Rule.”
+5.	You should now be in the page where you create alert rules. For the “Signal name” select Custom log search. 
+6.	Copy and Paste the code from the previous step in the “Search Query” entry. 
+7.	Run the query and then click “continue editing alert”
+8.	Change the “Aggregation Granularity” to 1 minute or 5 minutes.
+9.	Under “Alert Logic” in the “Operator” box click Greater than. The “Threshold Value” should be 0. And the “Frequency of Evaluation” should be 1 minute or 5 minutes. This means that you will get an alert every 1 minute if the login attempt failed is greater than 0. So basically, if anybody fails to login then you will get an alert. 
+10.	Click “Next” and go to actions. Click Create New action Group.
+11.	Select the right resource group (HoneyPotLab), the right region (US East), and then name the action group. 
+12.	Click next to go to the Notifications tab. This tab is where you select what type of notification you want to receive. You can set the notification type however you want. Whether that is an email, text message, push notification, or voice notification. However, in this case we are doing a push notification. 
+13.	Under “Notification type” select Email/SMS message/Push/Voice
+14.	Name the Notification. I named it “Failed_Login”
+15.	At the right hand side select “Azure Mobile App Notification” and enter the email address for the account. MAKE SURE IT IS THE SAME ACCOUNT THAT THE ALERTS ARE ON.  
+16.	Review and Create it.
+
+###  Step 13 : Shut Down Resources
+
+>IMPORTANT: DO NOT SKIP THIS STEP OR ELSE YOU WILL GET CHARGED MONEY
+
+- Type "Resource groups" in the serach bar -> name of resource group
+- Key in the name of the resource group (honeypot-lab) to verify removal of resources
+- Select the Apply force delete for selected Virtual machines and Virtual machine scale sets box
+- Click Delete
+
+![delte](https://camo.githubusercontent.com/a1b196dcb1e839bf547b8e967043afc7ca07bac1bbd1a4512084b2d02c94dbbc/68747470733a2f2f692e696d6775722e636f6d2f6b54736468354d2e706e67)
+
+
+
+
+
+
+
 
 
